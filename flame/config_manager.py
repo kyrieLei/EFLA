@@ -192,7 +192,7 @@ class JobConfig:
             help="Exponential moving average hyperparameters to use"
         )
         self.parser.add_argument(
-            "--optimizer.weight_decay", type=float, default=0.1,
+            "--optimizer.weight_decay", type=float, default=0.01,
             help="Weight decay to use"
         )
         self.parser.add_argument(

@@ -134,6 +134,10 @@ class DeltaNet(nn.Module):
         self.k_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
         self.v_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
 
+
+
+
+
         self.use_beta = use_beta
         if self.use_beta:
             self.b_proj = nn.Linear(hidden_size, self.num_heads, bias=False)
@@ -243,9 +247,13 @@ class DeltaNet(nn.Module):
             k = sum_norm(k).to(k)
 
         if self.use_beta:
-            beta = torch.sigmoid(self.b_proj(hidden_states))
+            # beta = torch.sigmoid(self.b_proj(hidden_states))
+            beta = F.softplus(self.b_proj(hidden_states))
+
         else:
             beta = torch.ones_like(q[..., 0])
+            
+
 
         if self.allow_neg_eigval:
             beta = beta * 2.
@@ -254,7 +262,7 @@ class DeltaNet(nn.Module):
 
         if self._update_rule == "efla":
             #######EFLA#########
-            # beta_original = beta
+            # beta_original = beta.clone()
             scale = k.shape[-1]**0.5
             k = k * scale
             q = F.normalize(q, dim=-1).to(q)
@@ -262,19 +270,10 @@ class DeltaNet(nn.Module):
             alpha = -torch.expm1(-(beta.float() * k2)) / k2
             alpha = alpha.to(k.dtype)
             beta = alpha
-            self.qk_norm = 'none'  
-
-            # if torch.distributed.get_rank() == 0 and torch.rand(1).item() < 0.01:
-            #         print(
-            #                 "Alpha shape:", tuple(alpha.shape),
-            #                 "β shape:",     tuple(beta_original.shape),   
-            #                 flush=True,
-            # #             )
-            # print("EFLA Lambda :", k_square_norm.mean().detach(), 
-            #       "Beta arg:", beta_arg.mean().detach(), 
-            #       "Beta:", beta.mean().detach())
-                
-
+            self.qk_norm = 'none' 
+            # if torch.distributed.get_rank() == 0 and torch.rand(1) < 0.1:
+            #     print("beta_original", beta_original.cpu().mean().item())
+            #     print("beta", beta.cpu().mean().item())
             #######EFLA########
 
         if mode == 'fused_recurrent':
